@@ -30,6 +30,7 @@ func PixivNotificationsToSlack(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
+	w.Write([]byte("OK"))
 }
 
 func initStore(ctx context.Context)(*firestore.Client, error) {
@@ -61,6 +62,9 @@ func check(ctx context.Context, client *firestore.Client) error {
 
 	store := &Store{client:client}
 	unreads, err := store.FilterUnreadNotifications(ctx, ns)
+	if len(unreads) < 1 {
+		return nil
+	}
 
 	if err := store.MarkAsRead(ctx, unreads); err != nil {
 		return err
