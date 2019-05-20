@@ -1,13 +1,19 @@
 package pixiv_notifications_to_slack
 
 import (
-	"cloud.google.com/go/firestore"
 	"context"
-	"firebase.google.com/go"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
+	firebase "firebase.google.com/go"
+
+	"cloud.google.com/go/firestore"
+)
+
+const (
+	firestoreCollectionPath = "pixivNotifications"
 )
 
 var store *firestore.Client
@@ -17,7 +23,7 @@ func PixivNotificationsToSlack(w http.ResponseWriter, r *http.Request) {
 	if store == nil {
 		st, err := initStore(ctx)
 		if err != nil {
-			log.Fatalf("error initStore: %+v", err)
+			log.Printf("error initStore: %+v", err)
 			w.WriteHeader(500)
 			return
 		}
@@ -25,15 +31,14 @@ func PixivNotificationsToSlack(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := check(ctx, store); err != nil {
-		log.Fatalf("error check: %+v", err)
+		log.Printf("error check: %+v", err)
 		w.WriteHeader(500)
 	}
 
 	w.WriteHeader(200)
-	w.Write([]byte("OK"))
 }
 
-func initStore(ctx context.Context)(*firestore.Client, error) {
+func initStore(ctx context.Context) (*firestore.Client, error) {
 	fa, err := firebase.NewApp(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -60,8 +65,14 @@ func check(ctx context.Context, client *firestore.Client) error {
 		return fmt.Errorf("env not set: SLACK_WEBHOOK_URL")
 	}
 
-	store := &Store{client:client}
-	unreads, err := store.FilterUnreadNotifications(ctx, ns)
+	store, err := NewFirestoreStore(client, firestoreCollectionPath)
+	if err != nil {
+		return err
+	}
+	unreads, err := store.Unreads(ctx, ns)
+	if err != nil {
+		return err
+	}
 	if len(unreads) < 1 {
 		return nil
 	}
