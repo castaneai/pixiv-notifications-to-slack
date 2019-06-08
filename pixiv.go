@@ -31,6 +31,28 @@ type responseJSON struct {
 	Body    *responseJSONBody `json:"body"`
 }
 
+func (rb *responseJSON) UnmarshalJSON(b []byte) error {
+	var a struct{
+		Error bool `json:"error"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(b, &a); err != nil {
+		return err
+	}
+	rb.Error = a.Error
+	rb.Message = a.Message
+	if !a.Error {
+		var valid struct {
+			Body *responseJSONBody `json:"body"`
+		}
+		if err := json.Unmarshal(b, &valid); err != nil {
+			return err
+		}
+		rb.Body = valid.Body
+	}
+	return nil
+}
+
 func GetNotifications(ctx context.Context, sessionID string) ([]*Notification, error) {
 	req, err := http.NewRequest("GET", baseURL+"/ajax/notification", nil)
 	if err != nil {
