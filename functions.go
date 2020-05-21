@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	firestoreCollectionPath = "pixivNotifications"
+	firestoreCollectionPath = "pixivNotificationsV2"
 )
 
 var store *firestore.Client
