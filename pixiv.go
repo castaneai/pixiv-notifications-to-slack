@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -14,15 +16,36 @@ const (
 )
 
 type Notification struct {
-	ID         int       `json:"id" firestore:"id"`
+	ID         string    `json:"id" firestore:"id"`
 	Content    string    `json:"content" firestore:"content"`
 	NotifiedAt time.Time `json:"notifiedAt" firestore:"notifiedAt"`
 	LinkURL    string    `json:"linkUrl" firestore:"linkUrl"`
 	IconURL    string    `json:"iconUrl" firestore:"iconUrl"`
 }
 
+// pixiv notification ID's type is (int|string) 😨
+type ambiguousNotification struct {
+	ID         json.RawMessage `json:"id"`
+	Content    string          `json:"content"`
+	NotifiedAt time.Time       `json:"notifiedAt"`
+	LinkURL    string          `json:"linkUrl"`
+	IconURL    string          `json:"iconUrl"`
+}
+
+func (b *ambiguousNotification) ToNotification() *Notification {
+	// Unquote string in json.RawMessage "\"string\"" -> "string"
+	id := strings.Trim(fmt.Sprintf("%s", b.ID), "\"")
+	return &Notification{
+		ID:         id,
+		Content:    b.Content,
+		NotifiedAt: b.NotifiedAt,
+		LinkURL:    b.LinkURL,
+		IconURL:    b.IconURL,
+	}
+}
+
 type responseJSONBody struct {
-	Items []*Notification `json:"items"`
+	Items []*ambiguousNotification `json:"items"`
 }
 
 type responseJSON struct {
@@ -32,8 +55,8 @@ type responseJSON struct {
 }
 
 func (rb *responseJSON) UnmarshalJSON(b []byte) error {
-	var a struct{
-		Error bool `json:"error"`
+	var a struct {
+		Error   bool   `json:"error"`
 		Message string `json:"message"`
 	}
 	if err := json.Unmarshal(b, &a); err != nil {
@@ -78,7 +101,7 @@ func GetNotifications(ctx context.Context, sessionID string) ([]*Notification, e
 	var result []*Notification
 	// reverse slice
 	for i := len(rj.Body.Items) - 1; i >= 0; i-- {
-		result = append(result, rj.Body.Items[i])
+		result = append(result, rj.Body.Items[i].ToNotification())
 	}
 	return result, nil
 }

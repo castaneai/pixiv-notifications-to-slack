@@ -59,8 +59,8 @@ func Test_MarkAsRead(t *testing.T) {
 
 	firstNotifiedAt := time.Now()
 	ns := []*Notification{
-		{ID: 1, Content: "n1", NotifiedAt: firstNotifiedAt},
-		{ID: 2, Content: "n2", NotifiedAt: firstNotifiedAt},
+		{ID: "1", Content: "n1", NotifiedAt: firstNotifiedAt},
+		{ID: "2", Content: "n2", NotifiedAt: firstNotifiedAt},
 	}
 
 	{
@@ -85,7 +85,7 @@ func Test_MarkAsRead(t *testing.T) {
 
 	{
 		secondNotifiedAt := firstNotifiedAt.Add(1 * time.Second)
-		ns := append(ns, &Notification{ID: 3, Content: "n3", NotifiedAt: secondNotifiedAt})
+		ns := append(ns, &Notification{ID: "3", Content: "n3", NotifiedAt: secondNotifiedAt})
 		unreads, err := store.Unreads(ctx, ns)
 		if err != nil {
 			t.Fatal(err)
